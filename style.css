@@ -208,6 +208,16 @@ body {
   border-color: var(--border-subtle);
 }
 
+.btn-subtle.icon-btn {
+  padding: 0.38rem 0.5rem;
+  text-decoration: none;
+}
+
+.header-icon {
+  width: 15px;
+  height: 15px;
+}
+
 .btn-subtle kbd {
   font-family: var(--font-mono);
   font-size: 0.65rem;
@@ -516,7 +526,13 @@ body[data-view="gauge"] #viewGauge {
 
 /* Footer */
 .footer {
-  padding-top: 0.5rem;
+  padding-top: 1.25rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
   text-align: center;
 }
 
@@ -526,8 +542,8 @@ body[data-view="gauge"] #viewGauge {
   justify-content: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  font-size: 0.775rem;
+  color: var(--text-secondary);
 }
 
 .footer-hint kbd {
@@ -545,29 +561,63 @@ body[data-view="gauge"] #viewGauge {
 }
 
 .footer-credit {
-  color:black;
-  margin-top: 0.65rem;
-  font-size: 0.685rem;
-  color: var(--text-dim);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-}
-
-.quiet-link {
-  /* color: var(--text-dim); */
-  color:black;
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.quiet-link:hover {
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  font-size: 0.775rem;
   color: var(--text-secondary);
+}
+
+.credit-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.credit-link:hover {
+  color: var(--text-main);
+}
+
+.credit-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.github-pill {
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  font-family: var(--font-mono);
+  font-size: 0.725rem;
+  color: var(--text-main);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.github-pill:hover {
+  background-color: var(--bg-subtle);
+  border-color: var(--border-subtle);
+}
+
+.support-btn {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--border-subtle);
+}
+
+.support-btn:hover {
+  text-decoration-color: var(--text-main);
 }
 
 .credit-sep {
   color: var(--border-subtle);
+  font-size: 0.7rem;
   user-select: none;
 }
 
