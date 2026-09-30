@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live WPM — Minimal Real-Time Typing Speed</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header / Brand -->
+    <header class="header">
+      <div class="brand">
+        <span class="brand-title">livewpm</span>
+        <span class="status-indicator" id="statusIndicator">
+          <span class="status-dot"></span>
+          <span class="status-text" id="statusText">idle</span>
+        </span>
+      </div>
+      <div class="header-actions">
+        <button id="resetBtn" class="btn-subtle" title="Clear text and reset stats (Esc)">
+          <span>Reset</span>
+          <kbd>Esc</kbd>
+        </button>
+      </div>
+    </header>
+
+    <!-- Prominent Live Speed Display -->
+    <section class="speed-board">
+      <div class="live-speed-wrapper">
+        <div class="speed-number" id="liveWpm">0</div>
+        <div class="speed-meta">
+          <span class="speed-unit">wpm</span>
+          <span class="speed-label">current speed</span>
+        </div>
+      </div>
+
+      <!-- Live Speed Meter Bar -->
+      <div class="gauge-container" title="Live velocity meter">
+        <div class="gauge-track">
+          <div class="gauge-fill" id="gaugeFill"></div>
+        </div>
+      </div>
+
+      <!-- Secondary Metrics -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <span class="metric-title">Average</span>
+          <span class="metric-value" id="avgWpm">0</span>
+          <span class="metric-sub">wpm</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-title">Peak</span>
+          <span class="metric-value" id="peakWpm">0</span>
+          <span class="metric-sub">wpm</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-title">Characters</span>
+          <span class="metric-value" id="charCount">0</span>
+          <span class="metric-sub">typed</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-title">Words</span>
+          <span class="metric-value" id="wordCount">0</span>
+          <span class="metric-sub">count</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Typing Input Area -->
+    <main class="editor-section">
+      <div class="editor-wrapper">
+        <textarea
+          id="typeArea"
+          class="typing-textarea"
+          placeholder="Start typing anything here freely... your speed updates live as you type."
+          spellcheck="false"
+          autofocus
+        ></textarea>
+      </div>
+    </main>
+
+    <!-- Footer / Details -->
+    <footer class="footer">
+      <div class="footer-hint">
+        <span>Press <kbd>Esc</kbd> anytime to restart</span>
+        <span class="separator">•</span>
+        <span>Standard: 5 characters = 1 word</span>
+        <span class="separator">•</span>
+        <span>Rolling 3s window</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

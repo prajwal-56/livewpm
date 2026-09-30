@@ -1,0 +1,242 @@
+/**
+ * Live WPM — Minimal Real-Time Typing Speed
+ */
+
+(function () {
+  'use strict';
+
+  // Elements
+  const typeArea = document.getElementById('typeArea');
+  const liveWpmEl = document.getElementById('liveWpm');
+  const avgWpmEl = document.getElementById('avgWpm');
+  const peakWpmEl = document.getElementById('peakWpm');
+  const charCountEl = document.getElementById('charCount');
+  const wordCountEl = document.getElementById('wordCount');
+  const gaugeFillEl = document.getElementById('gaugeFill');
+  const statusIndicatorEl = document.getElementById('statusIndicator');
+  const statusTextEl = document.getElementById('statusText');
+  const resetBtn = document.getElementById('resetBtn');
+
+  // Configuration
+  const WINDOW_MS = 2500;       // 2.5s sliding window for live velocity
+  const IDLE_TIMEOUT_MS = 1400; // Idle threshold before decay kicks in
+  const MAX_GAUGE_WPM = 130;    // Full gauge meter scale
+
+  // State
+  let keystrokeLog = [];        // [{ time: DOMHighResTimeStamp, chars: number }]
+  let previousTextLength = 0;
+  let sessionStartTime = null;
+  let lastKeystrokeTime = null;
+  let totalActiveTimeMs = 0;
+  let totalCharsTyped = 0;
+  let peakWpm = 0;
+
+  let currentDisplayedWpm = 0;
+  let targetLiveWpm = 0;
+  let isTyping = false;
+  let animationFrameId = null;
+
+  // Initialize
+  function init() {
+    typeArea.focus();
+
+    typeArea.addEventListener('input', handleInput);
+    typeArea.addEventListener('keydown', handleKeyDown);
+    resetBtn.addEventListener('click', resetAll);
+
+    // Global shortcut: Esc resets
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        resetAll();
+      }
+    });
+
+    // Start render loop
+    requestAnimationFrame(renderLoop);
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      resetAll();
+    }
+  }
+
+  function handleInput(e) {
+    const now = performance.now();
+    const currentLength = typeArea.value.length;
+    const delta = currentLength - previousTextLength;
+
+    if (!sessionStartTime) {
+      sessionStartTime = now;
+    }
+
+    // Accumulate active typing time
+    if (lastKeystrokeTime) {
+      const gap = now - lastKeystrokeTime;
+      // If gap is reasonable (less than 2s), count towards active time
+      if (gap < 2000) {
+        totalActiveTimeMs += gap;
+      }
+    }
+    lastKeystrokeTime = now;
+
+    // Only count realistic typing actions towards WPM velocity
+    let charsAdded = 0;
+    if (e.inputType === 'insertFromPaste') {
+      // Pasted text: do not skew live typing speed
+      charsAdded = 0;
+    } else if (delta === -1 || e.inputType === 'deleteContentBackward') {
+      // Single backspace/delete counts as 1 keystroke effort
+      charsAdded = 1;
+    } else if (delta > 0) {
+      // Normal character entry (clamp bursts from IME/autocomplete)
+      charsAdded = Math.min(delta, 5);
+    }
+
+    if (charsAdded > 0) {
+      keystrokeLog.push({ time: now, chars: charsAdded });
+      totalCharsTyped += charsAdded;
+    }
+
+    previousTextLength = currentLength;
+    setTypingState(true);
+
+    // Quick subtle pulse on number
+    liveWpmEl.classList.remove('pulse');
+    void liveWpmEl.offsetWidth; // trigger reflow
+    liveWpmEl.classList.add('pulse');
+
+    updateTextCounts();
+  }
+
+  function setTypingState(typing) {
+    if (isTyping !== typing) {
+      isTyping = typing;
+      if (typing) {
+        statusIndicatorEl.classList.add('active');
+        statusTextEl.textContent = 'typing';
+      } else {
+        statusIndicatorEl.classList.remove('active');
+        statusTextEl.textContent = 'idle';
+      }
+    }
+  }
+
+  function updateTextCounts() {
+    const text = typeArea.value.trim();
+    charCountEl.textContent = typeArea.value.length;
+    
+    // Count words (words separated by whitespace)
+    const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+    wordCountEl.textContent = words;
+  }
+
+  function calculateLiveWpm(now) {
+    // Purge records older than sliding window
+    const windowStart = now - WINDOW_MS;
+    keystrokeLog = keystrokeLog.filter(item => item.time >= windowStart);
+
+    if (keystrokeLog.length === 0) {
+      return 0;
+    }
+
+    // Sum characters in window
+    const charsInWindow = keystrokeLog.reduce((sum, item) => sum + item.chars, 0);
+
+    // Determine the effective duration of the window
+    const oldestInWindow = keystrokeLog[0].time;
+    const windowDurationSec = Math.max(0.65, (now - oldestInWindow) / 1000);
+
+    // 5 characters = 1 standard word
+    const words = charsInWindow / 5;
+    const minutes = windowDurationSec / 60;
+    const rawWpm = words / minutes;
+
+    return Math.max(0, rawWpm);
+  }
+
+  function calculateAverageWpm() {
+    if (totalActiveTimeMs < 1000 || totalCharsTyped === 0) {
+      return 0;
+    }
+    const totalMinutes = (totalActiveTimeMs / 1000) / 60;
+    const totalWords = totalCharsTyped / 5;
+    return Math.round(totalWords / totalMinutes);
+  }
+
+  function renderLoop() {
+    const now = performance.now();
+
+    // Check idle status
+    if (lastKeystrokeTime) {
+      const timeSinceLastKey = now - lastKeystrokeTime;
+      if (timeSinceLastKey > IDLE_TIMEOUT_MS) {
+        setTypingState(false);
+        // Gradually decay target live WPM when idle
+        targetLiveWpm = 0;
+      } else {
+        targetLiveWpm = calculateLiveWpm(now);
+      }
+    } else {
+      targetLiveWpm = 0;
+    }
+
+    // Smooth lerp towards target WPM
+    const lerpFactor = targetLiveWpm === 0 ? 0.08 : 0.2;
+    currentDisplayedWpm += (targetLiveWpm - currentDisplayedWpm) * lerpFactor;
+
+    // Snap to 0 if very small
+    if (currentDisplayedWpm < 0.3) {
+      currentDisplayedWpm = 0;
+    }
+
+    const roundedLiveWpm = Math.round(currentDisplayedWpm);
+    liveWpmEl.textContent = roundedLiveWpm;
+
+    // Track peak WPM
+    if (roundedLiveWpm > peakWpm) {
+      peakWpm = roundedLiveWpm;
+      peakWpmEl.textContent = peakWpm;
+    }
+
+    // Update Average Wpm
+    avgWpmEl.textContent = calculateAverageWpm();
+
+    // Gauge meter bar
+    const gaugePercent = Math.min(100, (currentDisplayedWpm / MAX_GAUGE_WPM) * 100);
+    gaugeFillEl.style.width = `${gaugePercent.toFixed(1)}%`;
+
+    requestAnimationFrame(renderLoop);
+  }
+
+  function resetAll() {
+    typeArea.value = '';
+    previousTextLength = 0;
+    keystrokeLog = [];
+    sessionStartTime = null;
+    lastKeystrokeTime = null;
+    totalActiveTimeMs = 0;
+    totalCharsTyped = 0;
+    peakWpm = 0;
+    targetLiveWpm = 0;
+    currentDisplayedWpm = 0;
+
+    liveWpmEl.textContent = '0';
+    avgWpmEl.textContent = '0';
+    peakWpmEl.textContent = '0';
+    charCountEl.textContent = '0';
+    wordCountEl.textContent = '0';
+    gaugeFillEl.style.width = '0%';
+    setTypingState(false);
+
+    typeArea.focus();
+  }
+
+  // Run on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();

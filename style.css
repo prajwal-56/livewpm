@@ -1,0 +1,364 @@
+/* =========================================================
+   Live WPM — Minimal, Clean & Smooth Aesthetic
+   ========================================================= */
+
+:root {
+  --bg-primary: #fbfbf9;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f4f3ef;
+  --bg-hover: #ebe9e3;
+
+  --border-light: #eae8e1;
+  --border-subtle: #dedbd2;
+
+  --text-main: #1f1f1d;
+  --text-secondary: #57564f;
+  --text-muted: #8c897f;
+  --text-dim: #b8b5ac;
+
+  --accent: #2e2e2c;
+  --accent-light: #e5e4de;
+  --status-active: #4a7c59;
+  --status-idle: #b0ada6;
+
+  --font-main: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --transition-smooth: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-family: var(--font-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  overflow-x: hidden;
+}
+
+/* App container */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 860px;
+  min-height: 100vh;
+  padding: 2.5rem 1.75rem 2rem 1.75rem;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2.25rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.brand-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-main);
+}
+
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  font-size: 0.725rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: var(--transition-smooth);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--status-idle);
+  transition: var(--transition-smooth);
+}
+
+.status-indicator.active {
+  color: var(--text-secondary);
+  border-color: #d1dcce;
+  background-color: #f1f6ef;
+}
+
+.status-indicator.active .status-dot {
+  background-color: var(--status-active);
+  box-shadow: 0 0 0 2px rgba(74, 124, 89, 0.2);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-subtle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  background-color: transparent;
+  border: 1px solid var(--border-light);
+  font-family: var(--font-main);
+  font-size: 0.775rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.btn-subtle:hover {
+  background-color: var(--bg-subtle);
+  color: var(--text-main);
+  border-color: var(--border-subtle);
+}
+
+.btn-subtle kbd {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  padding: 0.15rem 0.3rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: 3px;
+  color: var(--text-muted);
+}
+
+/* Speed Board / Metrics */
+.speed-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.live-speed-wrapper {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.speed-number {
+  font-size: 6.5rem;
+  line-height: 0.9;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+  color: var(--text-main);
+  min-width: 2.2ch;
+  transition: transform 0.15s ease-out;
+}
+
+.speed-number.pulse {
+  transform: scale(1.025);
+}
+
+.speed-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.speed-unit {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.speed-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* Subtle velocity bar */
+.gauge-container {
+  width: 100%;
+  max-width: 440px;
+  margin-bottom: 1.75rem;
+}
+
+.gauge-track {
+  width: 100%;
+  height: 4px;
+  background-color: var(--border-light);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.gauge-fill {
+  width: 0%;
+  height: 100%;
+  background-color: var(--accent);
+  border-radius: 999px;
+  transition: width 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Secondary Metrics Cards */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 600px;
+}
+
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.65rem 0.5rem;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.metric-title {
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 0.15rem;
+}
+
+.metric-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-main);
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.metric-sub {
+  font-size: 0.675rem;
+  color: var(--text-dim);
+}
+
+/* Editor Section */
+.editor-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.5rem;
+}
+
+.editor-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 1.5rem 1.75rem;
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.editor-wrapper:focus-within {
+  border-color: var(--border-subtle);
+  box-shadow: 0 4px 14px -3px rgba(0, 0, 0, 0.05);
+}
+
+.typing-textarea {
+  width: 100%;
+  min-height: 280px;
+  resize: vertical;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-main);
+  font-size: 1.125rem;
+  line-height: 1.75;
+  color: var(--text-main);
+}
+
+.typing-textarea::placeholder {
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+/* Footer */
+.footer {
+  padding-top: 0.5rem;
+  text-align: center;
+}
+
+.footer-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.footer-hint kbd {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 0.1rem 0.35rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: 3px;
+  color: var(--text-secondary);
+}
+
+.footer-hint .separator {
+  color: var(--border-subtle);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .app-container {
+    padding: 1.5rem 1rem 1.5rem 1rem;
+  }
+
+  .speed-number {
+    font-size: 4.75rem;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .typing-textarea {
+    font-size: 1rem;
+    min-height: 220px;
+  }
+}
