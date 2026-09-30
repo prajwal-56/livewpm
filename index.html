@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Live WPM — Minimal Real-Time Typing Speed</title>
+  <title>Live WPM — Minimal Real-Time Typing Speed & Speedometer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-view="text">
   <div class="app-container">
-    <!-- Header / Brand -->
+    <!-- Header / Brand & Controls -->
     <header class="header">
       <div class="brand">
         <span class="brand-title">livewpm</span>
@@ -20,7 +20,24 @@
           <span class="status-text" id="statusText">idle</span>
         </span>
       </div>
-      <div class="header-actions">
+
+      <div class="header-controls">
+        <!-- View Mode Segmented Control -->
+        <div class="mode-switcher" role="tablist" aria-label="Display mode">
+          <button class="mode-btn active" id="modeBtnText" role="tab" aria-selected="true" data-mode="text">
+            <svg class="mode-icon" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+            </svg>
+            <span>Simple</span>
+          </button>
+          <button class="mode-btn" id="modeBtnGauge" role="tab" aria-selected="false" data-mode="gauge">
+            <svg class="mode-icon" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .284.048.557.137.812a1 1 0 001.89-.654.512.512 0 01-.027-.158c0-.435.312-.907.828-1.282A2.54 2.54 0 0110 6.223V10a1 1 0 102 0V5z" clip-rule="evenodd"/>
+            </svg>
+            <span>Speedometer</span>
+          </button>
+        </div>
+
         <button id="resetBtn" class="btn-subtle" title="Clear text and reset stats (Esc)">
           <span>Reset</span>
           <kbd>Esc</kbd>
@@ -28,24 +45,107 @@
       </div>
     </header>
 
-    <!-- Prominent Live Speed Display -->
+    <!-- Main Speed Display Section -->
     <section class="speed-board">
-      <div class="live-speed-wrapper">
-        <div class="speed-number" id="liveWpm">0</div>
-        <div class="speed-meta">
-          <span class="speed-unit">wpm</span>
-          <span class="speed-label">current speed</span>
+      
+      <!-- MODE A: Minimal Simple Text View -->
+      <div class="view-panel view-simple" id="viewSimple">
+        <div class="live-speed-wrapper">
+          <div class="speed-number" id="liveWpm">0</div>
+          <div class="speed-meta">
+            <span class="speed-unit">wpm</span>
+            <span class="tier-pill" id="tierPillSimple">Warmup</span>
+          </div>
+        </div>
+
+        <!-- Live Speed Bar Track -->
+        <div class="gauge-container" title="Live velocity meter">
+          <div class="gauge-track">
+            <div class="gauge-fill" id="gaugeFill"></div>
+          </div>
         </div>
       </div>
 
-      <!-- Live Speed Meter Bar -->
-      <div class="gauge-container" title="Live velocity meter">
-        <div class="gauge-track">
-          <div class="gauge-fill" id="gaugeFill"></div>
+      <!-- MODE B: Analog Speedometer Instrument Gauge -->
+      <div class="view-panel view-gauge-panel" id="viewGauge">
+        <div class="speedometer-container">
+          <svg class="speedometer-svg" viewBox="0 0 320 220" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <linearGradient id="arcTrackGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#dedbd2"/>
+                <stop offset="100%" stop-color="#c8c5bc"/>
+              </linearGradient>
+            </defs>
+
+            <!-- Background Track Arc (240 degrees, radius 110, center 160, 150) -->
+            <path
+              class="speedo-track"
+              d="M 64.73 205 A 110 110 0 1 1 255.27 205"
+              fill="none"
+              stroke-linecap="round"
+            />
+
+            <!-- Dynamic Active Colored Arc -->
+            <path
+              id="speedoArcFill"
+              class="speedo-fill"
+              d="M 64.73 205 A 110 110 0 1 1 255.27 205"
+              fill="none"
+              stroke-linecap="round"
+            />
+
+            <!-- Scale Ticks & Numbers -->
+            <g class="speedo-ticks" id="speedoTicks">
+              <!-- 0 WPM -->
+              <line x1="75.1" y1="199.0" x2="64.7" y2="205.0" class="tick" />
+              <text x="56" y="218" class="tick-label">0</text>
+
+              <!-- 30 WPM -->
+              <line x1="63.5" y1="133.0" x2="51.7" y2="130.9" class="tick" />
+              <text x="36" y="132" class="tick-label">30</text>
+
+              <!-- 60 WPM -->
+              <line x1="97.0" y1="74.9" x2="89.3" y2="65.7" class="tick" />
+              <text x="76" y="55" class="tick-label">60</text>
+
+              <!-- 90 WPM -->
+              <line x1="160.0" y1="52.0" x2="160.0" y2="40.0" class="tick" />
+              <text x="160" y="26" class="tick-label">90</text>
+
+              <!-- 120 WPM -->
+              <line x1="223.0" y1="74.9" x2="230.7" y2="65.7" class="tick" />
+              <text x="244" y="55" class="tick-label">120</text>
+
+              <!-- 150 WPM -->
+              <line x1="256.5" y1="133.0" x2="268.3" y2="130.9" class="tick" />
+              <text x="284" y="132" class="tick-label">150</text>
+
+              <!-- 180 WPM -->
+              <line x1="244.9" y1="199.0" x2="255.3" y2="205.0" class="tick" />
+              <text x="264" y="218" class="tick-label">180</text>
+            </g>
+
+            <!-- Speedometer Needle (pivot at 160, 150) -->
+            <g id="speedoNeedleGroup" class="needle-group">
+              <polygon points="157.5,150 160,55 162.5,150 160,165" class="speedo-needle" id="speedoNeedle" />
+              <!-- Center Hub -->
+              <circle cx="160" cy="150" r="10" class="needle-hub-outer" />
+              <circle cx="160" cy="150" r="5" class="needle-hub-inner" />
+            </g>
+          </svg>
+
+          <!-- Digital Readout centered inside speedometer base -->
+          <div class="speedo-digital">
+            <div class="speedo-value" id="speedoValue">0</div>
+            <div class="speedo-unit-row">
+              <span class="speedo-unit">WPM</span>
+              <span class="tier-pill" id="tierPillGauge">Warmup</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Secondary Metrics -->
+      <!-- Secondary Metrics Grid -->
       <div class="metrics-grid">
         <div class="metric-card">
           <span class="metric-title">Average</span>
@@ -90,7 +190,7 @@
         <span class="separator">•</span>
         <span>Standard: 5 characters = 1 word</span>
         <span class="separator">•</span>
-        <span>Rolling 3s window</span>
+        <span>Rolling 2.5s window</span>
       </div>
     </footer>
   </div>

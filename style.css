@@ -1,5 +1,5 @@
 /* =========================================================
-   Live WPM — Minimal, Clean & Smooth Aesthetic
+   Live WPM — Minimal, Clean & Smooth Aesthetic with Speedometer
    ========================================================= */
 
 :root {
@@ -16,8 +16,10 @@
   --text-muted: #8c897f;
   --text-dim: #b8b5ac;
 
-  --accent: #2e2e2c;
-  --accent-light: #e5e4de;
+  /* Default tier color: Warm Slate */
+  --speed-color: #4b4a44;
+  --speed-color-bg: #f4f3ef;
+
   --status-active: #4a7c59;
   --status-idle: #b0ada6;
 
@@ -25,6 +27,28 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   --transition-smooth: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Speed Tier Color Variations (Smoothly applied) */
+body[data-tier="0"] {
+  --speed-color: #55544e;
+  --speed-color-bg: #f2f1ec;
+}
+body[data-tier="1"] {
+  --speed-color: #2b7a54;
+  --speed-color-bg: #edf6f1;
+}
+body[data-tier="2"] {
+  --speed-color: #2563eb;
+  --speed-color-bg: #eff5fe;
+}
+body[data-tier="3"] {
+  --speed-color: #d96818;
+  --speed-color-bg: #fef4ec;
+}
+body[data-tier="4"] {
+  --speed-color: #a82d7b;
+  --speed-color-bg: #fdf0f7;
 }
 
 *, *::before, *::after {
@@ -55,7 +79,7 @@ body {
   width: 100%;
   max-width: 860px;
   min-height: 100vh;
-  padding: 2.5rem 1.75rem 2rem 1.75rem;
+  padding: 2.25rem 1.75rem 2rem 1.75rem;
 }
 
 /* Header */
@@ -63,7 +87,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 2.25rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .brand {
@@ -73,7 +99,7 @@ body {
 }
 
 .brand-title {
-  font-size: 1.125rem;
+  font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: -0.03em;
   color: var(--text-main);
@@ -112,17 +138,59 @@ body {
   box-shadow: 0 0 0 2px rgba(74, 124, 89, 0.2);
 }
 
-.header-actions {
+.header-controls {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+/* Mode Switcher Segmented Control */
+.mode-switcher {
+  display: inline-flex;
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-main);
+  font-size: 0.775rem;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.mode-btn .mode-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.mode-btn:hover {
+  color: var(--text-main);
+}
+
+.mode-btn.active {
+  background-color: var(--bg-surface);
+  color: var(--text-main);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .btn-subtle {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.4rem 0.75rem;
+  padding: 0.38rem 0.75rem;
   border-radius: 6px;
   background-color: transparent;
   border: 1px solid var(--border-light);
@@ -150,20 +218,45 @@ body {
   color: var(--text-muted);
 }
 
-/* Speed Board / Metrics */
+/* Speed Board Section */
 .speed-board {
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-bottom: 2rem;
   text-align: center;
+  position: relative;
 }
 
+/* Panels */
+.view-panel {
+  width: 100%;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+body[data-view="text"] #viewSimple {
+  display: flex;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+body[data-view="gauge"] #viewGauge {
+  display: flex;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* MODE A: Simple View */
 .live-speed-wrapper {
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
   margin-bottom: 1.25rem;
 }
 
@@ -174,9 +267,9 @@ body {
   letter-spacing: -0.05em;
   font-feature-settings: "tnum";
   font-variant-numeric: tabular-nums;
-  color: var(--text-main);
+  color: var(--speed-color);
   min-width: 2.2ch;
-  transition: transform 0.15s ease-out;
+  transition: color 0.35s ease, transform 0.15s ease-out;
 }
 
 .speed-number.pulse {
@@ -187,24 +280,30 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  gap: 0.35rem;
   text-align: left;
 }
 
 .speed-unit {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text-secondary);
   text-transform: uppercase;
 }
 
-.speed-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--text-muted);
+.tier-pill {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background-color: var(--speed-color-bg);
+  color: var(--speed-color);
+  letter-spacing: 0.02em;
+  transition: all 0.35s ease;
 }
 
-/* Subtle velocity bar */
+/* Horizontal Speed Bar */
 .gauge-container {
   width: 100%;
   max-width: 440px;
@@ -213,7 +312,7 @@ body {
 
 .gauge-track {
   width: 100%;
-  height: 4px;
+  height: 5px;
   background-color: var(--border-light);
   border-radius: 999px;
   overflow: hidden;
@@ -222,9 +321,111 @@ body {
 .gauge-fill {
   width: 0%;
   height: 100%;
-  background-color: var(--accent);
+  background-color: var(--speed-color);
   border-radius: 999px;
-  transition: width 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: width 0.15s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.35s ease;
+}
+
+/* MODE B: Speedometer Gauge View */
+.speedometer-container {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.speedometer-svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.speedo-track {
+  stroke: var(--border-subtle);
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+
+.speedo-fill {
+  stroke: var(--speed-color);
+  stroke-width: 10;
+  stroke-linecap: round;
+  /* Arc circumference calculation: approx 460.7px */
+  stroke-dasharray: 460.7;
+  stroke-dashoffset: 460.7;
+  transition: stroke 0.35s ease;
+}
+
+.speedo-ticks .tick {
+  stroke: var(--text-dim);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.speedo-ticks .tick-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  fill: var(--text-muted);
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.needle-group {
+  transform-origin: 160px 150px;
+  will-change: transform;
+}
+
+.speedo-needle {
+  fill: var(--speed-color);
+  transition: fill 0.35s ease;
+}
+
+.needle-hub-outer {
+  fill: var(--bg-surface);
+  stroke: var(--border-subtle);
+  stroke-width: 2;
+}
+
+.needle-hub-inner {
+  fill: var(--speed-color);
+  transition: fill 0.35s ease;
+}
+
+.speedo-digital {
+  position: absolute;
+  bottom: 0px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.speedo-value {
+  font-size: 2.75rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+  color: var(--speed-color);
+  transition: color 0.35s ease;
+}
+
+.speedo-unit-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.speedo-unit {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
 }
 
 /* Secondary Metrics Cards */
@@ -349,8 +550,20 @@ body {
     padding: 1.5rem 1rem 1.5rem 1rem;
   }
 
+  .header {
+    margin-bottom: 1.5rem;
+  }
+
   .speed-number {
     font-size: 4.75rem;
+  }
+
+  .speedometer-container {
+    max-width: 300px;
+  }
+
+  .speedo-value {
+    font-size: 2.25rem;
   }
 
   .metrics-grid {

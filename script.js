@@ -1,5 +1,5 @@
 /**
- * Live WPM — Minimal Real-Time Typing Speed
+ * Live WPM — Minimal Real-Time Typing Speed & Speedometer
  */
 
 (function () {
@@ -17,10 +17,31 @@
   const statusTextEl = document.getElementById('statusText');
   const resetBtn = document.getElementById('resetBtn');
 
+  // Mode Elements
+  const modeBtnText = document.getElementById('modeBtnText');
+  const modeBtnGauge = document.getElementById('modeBtnGauge');
+
+  // Speedometer Elements
+  const speedoArcFill = document.getElementById('speedoArcFill');
+  const speedoNeedleGroup = document.getElementById('speedoNeedleGroup');
+  const speedoValueEl = document.getElementById('speedoValue');
+  const tierPillSimple = document.getElementById('tierPillSimple');
+  const tierPillGauge = document.getElementById('tierPillGauge');
+
   // Configuration
   const WINDOW_MS = 2500;       // 2.5s sliding window for live velocity
   const IDLE_TIMEOUT_MS = 1400; // Idle threshold before decay kicks in
-  const MAX_GAUGE_WPM = 130;    // Full gauge meter scale
+  const MAX_SPEEDO_WPM = 180;   // Speedometer gauge upper bound
+  const MAX_BAR_WPM = 130;      // Horizontal bar gauge upper bound
+
+  // Speed Tiers config
+  const TIERS = [
+    { threshold: 0,   index: 0, label: 'Warmup' },
+    { threshold: 30,  index: 1, label: 'Cruising' },
+    { threshold: 60,  index: 2, label: 'Brisk' },
+    { threshold: 85,  index: 3, label: 'Fast' },
+    { threshold: 120, index: 4, label: 'Supersonic' }
+  ];
 
   // State
   let keystrokeLog = [];        // [{ time: DOMHighResTimeStamp, chars: number }]
@@ -34,15 +55,34 @@
   let currentDisplayedWpm = 0;
   let targetLiveWpm = 0;
   let isTyping = false;
-  let animationFrameId = null;
+  let currentTierIndex = -1;
+  let arcTotalLength = 460.7;
 
   // Initialize
   function init() {
     typeArea.focus();
 
+    // Calculate exact SVG arc path length
+    if (speedoArcFill && speedoArcFill.getTotalLength) {
+      arcTotalLength = speedoArcFill.getTotalLength();
+      speedoArcFill.style.strokeDasharray = `${arcTotalLength}`;
+      speedoArcFill.style.strokeDashoffset = `${arcTotalLength}`;
+    }
+
+    // Set initial tier
+    updateSpeedTier(0);
+
+    // Load saved view mode or default to text
+    const savedMode = localStorage.getItem('livewpm_view_mode') || 'text';
+    setViewMode(savedMode);
+
+    // Event listeners
     typeArea.addEventListener('input', handleInput);
     typeArea.addEventListener('keydown', handleKeyDown);
     resetBtn.addEventListener('click', resetAll);
+
+    modeBtnText.addEventListener('click', () => setViewMode('text'));
+    modeBtnGauge.addEventListener('click', () => setViewMode('gauge'));
 
     // Global shortcut: Esc resets
     window.addEventListener('keydown', (e) => {
@@ -53,6 +93,25 @@
 
     // Start render loop
     requestAnimationFrame(renderLoop);
+  }
+
+  function setViewMode(mode) {
+    document.body.setAttribute('data-view', mode);
+    localStorage.setItem('livewpm_view_mode', mode);
+
+    if (mode === 'text') {
+      modeBtnText.classList.add('active');
+      modeBtnText.setAttribute('aria-selected', 'true');
+      modeBtnGauge.classList.remove('active');
+      modeBtnGauge.setAttribute('aria-selected', 'false');
+    } else {
+      modeBtnGauge.classList.add('active');
+      modeBtnGauge.setAttribute('aria-selected', 'true');
+      modeBtnText.classList.remove('active');
+      modeBtnText.setAttribute('aria-selected', 'false');
+    }
+
+    typeArea.focus();
   }
 
   function handleKeyDown(e) {
@@ -165,6 +224,23 @@
     return Math.round(totalWords / totalMinutes);
   }
 
+  function updateSpeedTier(wpm) {
+    let tier = TIERS[0];
+    for (let i = TIERS.length - 1; i >= 0; i--) {
+      if (wpm >= TIERS[i].threshold) {
+        tier = TIERS[i];
+        break;
+      }
+    }
+
+    if (tier.index !== currentTierIndex) {
+      currentTierIndex = tier.index;
+      document.body.setAttribute('data-tier', tier.index);
+      tierPillSimple.textContent = tier.label;
+      tierPillGauge.textContent = tier.label;
+    }
+  }
+
   function renderLoop() {
     const now = performance.now();
 
@@ -192,7 +268,13 @@
     }
 
     const roundedLiveWpm = Math.round(currentDisplayedWpm);
+
+    // Update numbers
     liveWpmEl.textContent = roundedLiveWpm;
+    speedoValueEl.textContent = roundedLiveWpm;
+
+    // Update speed tier & color
+    updateSpeedTier(roundedLiveWpm);
 
     // Track peak WPM
     if (roundedLiveWpm > peakWpm) {
@@ -203,9 +285,19 @@
     // Update Average Wpm
     avgWpmEl.textContent = calculateAverageWpm();
 
-    // Gauge meter bar
-    const gaugePercent = Math.min(100, (currentDisplayedWpm / MAX_GAUGE_WPM) * 100);
-    gaugeFillEl.style.width = `${gaugePercent.toFixed(1)}%`;
+    // Horizontal bar meter
+    const barPercent = Math.min(100, (currentDisplayedWpm / MAX_BAR_WPM) * 100);
+    gaugeFillEl.style.width = `${barPercent.toFixed(1)}%`;
+
+    // Speedometer needle angle & arc
+    // Needle sweeps from -120deg (0 WPM) to +120deg (180 WPM) = 240deg total
+    const speedRatio = Math.min(1, currentDisplayedWpm / MAX_SPEEDO_WPM);
+    const needleAngle = -120 + (speedRatio * 240);
+    speedoNeedleGroup.style.transform = `rotate(${needleAngle.toFixed(2)}deg)`;
+
+    // Speedometer colored arc offset
+    const arcOffset = arcTotalLength * (1 - speedRatio);
+    speedoArcFill.style.strokeDashoffset = `${arcOffset.toFixed(2)}`;
 
     requestAnimationFrame(renderLoop);
   }
@@ -223,11 +315,16 @@
     currentDisplayedWpm = 0;
 
     liveWpmEl.textContent = '0';
+    speedoValueEl.textContent = '0';
     avgWpmEl.textContent = '0';
     peakWpmEl.textContent = '0';
     charCountEl.textContent = '0';
     wordCountEl.textContent = '0';
     gaugeFillEl.style.width = '0%';
+    speedoArcFill.style.strokeDashoffset = `${arcTotalLength}`;
+    speedoNeedleGroup.style.transform = 'rotate(-120deg)';
+
+    updateSpeedTier(0);
     setTypingState(false);
 
     typeArea.focus();
