@@ -544,6 +544,33 @@ body[data-view="gauge"] #viewGauge {
   color: var(--border-subtle);
 }
 
+.footer-credit {
+  color:black;
+  margin-top: 0.65rem;
+  font-size: 0.685rem;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.quiet-link {
+  /* color: var(--text-dim); */
+  color:black;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.quiet-link:hover {
+  color: var(--text-secondary);
+}
+
+.credit-sep {
+  color: var(--border-subtle);
+  user-select: none;
+}
+
 /* Responsive adjustments */
 @media (max-width: 640px) {
   .app-container {
