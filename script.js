@@ -371,6 +371,10 @@
     
     const w = speedCanvas.width;
     const h = speedCanvas.height;
+    
+    // Dedicated axis area on the left
+    const padLeft = 35 * dpr;
+    const graphW = w - padLeft;
 
     // Determine dynamic Y-axis scale (zoom out if typing super fast)
     const peakInHistory = Math.max(...graphHistory, currentDisplayedWpm);
@@ -384,7 +388,7 @@
     // 1. Reactive Ambient Background Tint
     // Gives the entire monitor a faint glow that matches the current speed tier
     ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.03)`;
-    ctx.fillRect(0, 0, w, h);
+    ctx.fillRect(padLeft, 0, graphW, h);
 
     // 2. Draw Subtle Grid dynamically based on scale
     ctx.strokeStyle = borderSubtle;
@@ -392,47 +396,56 @@
     ctx.setLineDash([4 * dpr, 4 * dpr]);
     ctx.beginPath();
     
-    // Vertical grid lines (simulating ECG paper)
-    const vGridCount = 10;
-    for (let i = 1; i < vGridCount; i++) {
-        const x = (i / vGridCount) * w;
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, h);
+    // Vertical grid lines (Scrolling to the left based on time)
+    const vGridStep = graphW / 12;
+    const scrollOffset = (now / 30) % vGridStep;
+    for (let x = padLeft - scrollOffset; x <= w; x += vGridStep) {
+        if (x >= padLeft) { 
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, h);
+        }
     }
 
-    // Horizontal grid lines
-    const gridStep = 60;
+    // Horizontal grid lines (More granular: Step 30)
+    const gridStep = 30;
     const maxGridLine = Math.ceil(currentGraphMaxWpm / gridStep) * gridStep;
     for (let val = 0; val <= maxGridLine; val += gridStep) {
         const y = h - (val / currentGraphMaxWpm) * h;
         if (y >= 0 && y <= h) {
-            ctx.moveTo(0, y);
+            ctx.moveTo(padLeft, y);
             ctx.lineTo(w, y);
         }
     }
     ctx.stroke();
     ctx.setLineDash([]); 
 
-    // 3. Draw Y-Axis Scale Labels
+    // Axis separator line
+    ctx.beginPath();
+    ctx.moveTo(padLeft, 0);
+    ctx.lineTo(padLeft, h);
+    ctx.stroke();
+
+    // 3. Draw Y-Axis Scale Labels (Outside graph, right-aligned to padding margin)
     const textMuted = style.getPropertyValue('--text-muted').trim() || '#87857d';
     ctx.font = `500 ${10 * dpr}px 'JetBrains Mono', monospace`;
     ctx.fillStyle = textMuted;
-    ctx.textBaseline = 'bottom';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'right';
     
     for (let val = gridStep; val <= maxGridLine; val += gridStep) {
         const y = h - (val / currentGraphMaxWpm) * h;
         if (y >= 0 && y <= h) {
-            ctx.fillText(val.toString(), 6 * dpr, y - 4 * dpr);
+            ctx.fillText(val.toString(), padLeft - 6 * dpr, y);
         }
     }
 
     // Build the line path
     ctx.beginPath();
-    let lastX = 0, lastY = h;
-    const endX = w * 0.78; // Position the leading edge at 78% of the canvas width
+    let lastX = padLeft, lastY = h;
+    const endX = padLeft + (graphW * 0.78);
     
     for (let i = 0; i < graphHistory.length; i++) {
-        const x = (i / (GRAPH_MAX_POINTS - 1)) * endX;
+        const x = padLeft + (i / (GRAPH_MAX_POINTS - 1)) * (endX - padLeft);
         const val = graphHistory[i]; // Uncapped value
         const y = h - (val / currentGraphMaxWpm) * h;
         if (i === 0) ctx.moveTo(x, y);
@@ -448,7 +461,7 @@
     ctx.shadowBlur = 10 * dpr;
     ctx.shadowColor = rgbSolid;
     
-    const strokeGrad = ctx.createLinearGradient(0, 0, endX, 0);
+    const strokeGrad = ctx.createLinearGradient(padLeft, 0, endX, 0);
     strokeGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0)`);
     strokeGrad.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, 0.3)`);
     strokeGrad.addColorStop(1, rgbSolid);
@@ -464,7 +477,7 @@
     
     // Draw Area Fill under graph
     ctx.lineTo(endX, h);
-    ctx.lineTo(0, h);
+    ctx.lineTo(padLeft, h);
     ctx.closePath();
     
     const fillGrad = ctx.createLinearGradient(0, 0, 0, h);
