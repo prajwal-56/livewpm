@@ -281,6 +281,13 @@
     // Update numbers
     liveWpmEl.textContent = roundedLiveWpm;
     speedoValueEl.textContent = roundedLiveWpm;
+    if (graphWpmEl) graphWpmEl.textContent = roundedLiveWpm;
+
+    // Track graph history
+    graphHistory.push(currentDisplayedWpm);
+    if (graphHistory.length > GRAPH_MAX_POINTS) {
+      graphHistory.shift();
+    }
 
     // Update speed tier & color
     updateSpeedTier(roundedLiveWpm);
@@ -308,7 +315,69 @@
     const arcOffset = arcTotalLength * (1 - speedRatio);
     speedoArcFill.style.strokeDashoffset = `${arcOffset.toFixed(2)}`;
 
+    // Render ECG Graph
+    drawGraph();
+
     requestAnimationFrame(renderLoop);
+  }
+
+  function drawGraph() {
+    if (!ctx || document.body.getAttribute('data-view') !== 'graph') return;
+
+    const style = getComputedStyle(document.body);
+    const speedColor = style.getPropertyValue('--speed-color').trim() || '#4b4a44';
+    const borderSubtle = style.getPropertyValue('--border-subtle').trim() || '#dedbd2';
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = speedCanvas.getBoundingClientRect();
+    
+    // Only resize if needed
+    if (speedCanvas.width !== rect.width * dpr || speedCanvas.height !== rect.height * dpr) {
+      speedCanvas.width = rect.width * dpr;
+      speedCanvas.height = rect.height * dpr;
+    }
+    
+    const w = speedCanvas.width;
+    const h = speedCanvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw Grid
+    ctx.strokeStyle = borderSubtle;
+    ctx.lineWidth = 1 * dpr;
+    ctx.setLineDash([4 * dpr, 4 * dpr]);
+    ctx.beginPath();
+    [0, 60, 120, 180].forEach(val => {
+        const y = h - (val / MAX_SPEEDO_WPM) * h;
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]); // reset
+
+    // Draw Line
+    ctx.beginPath();
+    for (let i = 0; i < graphHistory.length; i++) {
+        const x = (i / (GRAPH_MAX_POINTS - 1)) * w;
+        const val = Math.min(graphHistory[i], MAX_SPEEDO_WPM);
+        const y = h - (val / MAX_SPEEDO_WPM) * h;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = speedColor;
+    ctx.lineWidth = 2.5 * dpr;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    
+    // Draw Area Fill
+    ctx.lineTo(w, h);
+    ctx.lineTo(0, h);
+    ctx.closePath();
+    ctx.globalAlpha = 0.1;
+    ctx.fillStyle = speedColor;
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
   }
 
   function resetAll() {
@@ -322,9 +391,11 @@
     peakWpm = 0;
     targetLiveWpm = 0;
     currentDisplayedWpm = 0;
+    graphHistory.fill(0);
 
     liveWpmEl.textContent = '0';
     speedoValueEl.textContent = '0';
+    if (graphWpmEl) graphWpmEl.textContent = '0';
     avgWpmEl.textContent = '0';
     peakWpmEl.textContent = '0';
     charCountEl.textContent = '0';
