@@ -68,7 +68,8 @@
   const GRAPH_MAX_POINTS = 200;
   let graphHistory = new Array(GRAPH_MAX_POINTS).fill(0);
   let currentGraphColor = [75, 74, 68];
-  let currentGraphMaxWpm = 180;
+  let currentGraphMaxWpm = 150;
+  let currentGraphMinWpm = 0;
 
   // Helper
   function hexToRgb(hex) {
@@ -378,8 +379,14 @@
 
     // Determine dynamic Y-axis scale (zoom out if typing super fast)
     const peakInHistory = Math.max(...graphHistory, currentDisplayedWpm);
-    const targetMax = Math.max(180, peakInHistory * 1.2); // 20% headroom above peak
+    const targetMax = Math.max(150, peakInHistory * 1.2); 
+    const targetMin = targetMax > 150 ? targetMax - 150 : 0; // Fixed 150 WPM window
+    
     currentGraphMaxWpm += (targetMax - currentGraphMaxWpm) * 0.05;
+    currentGraphMinWpm += (targetMin - currentGraphMinWpm) * 0.05;
+    
+    const activeRange = currentGraphMaxWpm - currentGraphMinWpm;
+    const getY = (val) => h - ((val - currentGraphMinWpm) / activeRange) * h;
 
     // Reset shadow state and clear canvas
     ctx.shadowBlur = 0;
@@ -406,11 +413,22 @@
         }
     }
 
-    // Horizontal grid lines (More granular: Step 30)
-    const gridStep = 30;
-    const maxGridLine = Math.ceil(currentGraphMaxWpm / gridStep) * gridStep;
-    for (let val = 0; val <= maxGridLine; val += gridStep) {
-        const y = h - (val / currentGraphMaxWpm) * h;
+    // Calculate smart label stepping to prevent clutter
+    const minLabelGapPx = 22 * dpr; // Minimum physical gap required for text
+    const baseStep = 10;
+    let labelStep = baseStep;
+    while (((labelStep / activeRange) * h) < minLabelGapPx) {
+        labelStep += baseStep;
+    }
+
+    // Horizontal grid lines (Dense ECG paper effect)
+    const startGrid = Math.floor(currentGraphMinWpm / baseStep) * baseStep;
+    const endGrid = Math.ceil(currentGraphMaxWpm / baseStep) * baseStep;
+    
+    ctx.setLineDash([2 * dpr, 4 * dpr]); // Softer dash pattern for dense grid
+    ctx.beginPath();
+    for (let val = startGrid; val <= endGrid; val += baseStep) {
+        const y = getY(val);
         if (y >= 0 && y <= h) {
             ctx.moveTo(padLeft, y);
             ctx.lineTo(w, y);
@@ -425,19 +443,26 @@
     ctx.lineTo(padLeft, h);
     ctx.stroke();
 
-    // 3. Draw Y-Axis Scale Labels (Outside graph, right-aligned to padding margin)
+    // 3. Draw Y-Axis Scale Labels (Smart Density with Ticks)
     const textMuted = style.getPropertyValue('--text-muted').trim() || '#87857d';
     ctx.font = `500 ${10 * dpr}px 'JetBrains Mono', monospace`;
     ctx.fillStyle = textMuted;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'right';
     
-    for (let val = gridStep; val <= maxGridLine; val += gridStep) {
-        const y = h - (val / currentGraphMaxWpm) * h;
+    ctx.beginPath();
+    const labelStartGrid = Math.floor(currentGraphMinWpm / labelStep) * labelStep;
+    for (let val = labelStartGrid; val <= endGrid; val += labelStep) {
+        const y = getY(val);
         if (y >= 0 && y <= h) {
-            ctx.fillText(val.toString(), padLeft - 6 * dpr, y);
+            // Draw text
+            ctx.fillText(val.toString(), padLeft - 8 * dpr, y);
+            // Draw tiny connection tick
+            ctx.moveTo(padLeft - 4 * dpr, y);
+            ctx.lineTo(padLeft, y);
         }
     }
+    ctx.stroke();
 
     // Build the line path
     ctx.beginPath();
@@ -447,7 +472,7 @@
     for (let i = 0; i < graphHistory.length; i++) {
         const x = padLeft + (i / (GRAPH_MAX_POINTS - 1)) * (endX - padLeft);
         const val = graphHistory[i]; // Uncapped value
-        const y = h - (val / currentGraphMaxWpm) * h;
+        const y = getY(val);
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
         
@@ -515,7 +540,8 @@
     targetLiveWpm = 0;
     currentDisplayedWpm = 0;
     graphHistory.fill(0);
-    currentGraphMaxWpm = 180;
+    currentGraphMaxWpm = 150;
+    currentGraphMinWpm = 0;
 
     liveWpmEl.textContent = '0';
     speedoValueEl.textContent = '0';
