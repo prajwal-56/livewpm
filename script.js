@@ -391,8 +391,10 @@
     // Build the line path
     ctx.beginPath();
     let lastX = 0, lastY = h;
+    const endX = w * 0.78; // Position the leading edge at 78% of the canvas width
+    
     for (let i = 0; i < graphHistory.length; i++) {
-        const x = (i / (GRAPH_MAX_POINTS - 1)) * w;
+        const x = (i / (GRAPH_MAX_POINTS - 1)) * endX;
         const val = Math.min(graphHistory[i], MAX_SPEEDO_WPM);
         const y = h - (val / MAX_SPEEDO_WPM) * h;
         if (i === 0) ctx.moveTo(x, y);
@@ -408,7 +410,7 @@
     ctx.shadowBlur = 10 * dpr;
     ctx.shadowColor = rgbSolid;
     
-    const strokeGrad = ctx.createLinearGradient(0, 0, w, 0);
+    const strokeGrad = ctx.createLinearGradient(0, 0, endX, 0);
     strokeGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0)`);
     strokeGrad.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, 0.3)`);
     strokeGrad.addColorStop(1, rgbSolid);
@@ -423,7 +425,7 @@
     ctx.shadowBlur = 0;
     
     // Draw Area Fill under graph
-    ctx.lineTo(w, h);
+    ctx.lineTo(endX, h);
     ctx.lineTo(0, h);
     ctx.closePath();
     
