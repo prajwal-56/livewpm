@@ -20,6 +20,7 @@
   // Mode Elements
   const modeBtnText = document.getElementById('modeBtnText');
   const modeBtnGauge = document.getElementById('modeBtnGauge');
+  const modeBtnGraph = document.getElementById('modeBtnGraph');
 
   // Speedometer Elements
   const speedoArcFill = document.getElementById('speedoArcFill');
@@ -27,6 +28,12 @@
   const speedoValueEl = document.getElementById('speedoValue');
   const tierPillSimple = document.getElementById('tierPillSimple');
   const tierPillGauge = document.getElementById('tierPillGauge');
+  
+  // Graph Elements
+  const graphWpmEl = document.getElementById('graphWpm');
+  const tierPillGraph = document.getElementById('tierPillGraph');
+  const speedCanvas = document.getElementById('speedCanvas');
+  const ctx = speedCanvas ? speedCanvas.getContext('2d') : null;
 
   // Configuration
   const WINDOW_MS = 2500;       // 2.5s sliding window for live velocity
@@ -57,6 +64,9 @@
   let isTyping = false;
   let currentTierIndex = -1;
   let arcTotalLength = 460.7;
+  
+  const GRAPH_MAX_POINTS = 200;
+  let graphHistory = new Array(GRAPH_MAX_POINTS).fill(0);
 
   // Initialize
   function init() {
@@ -83,6 +93,7 @@
 
     modeBtnText.addEventListener('click', () => setViewMode('text'));
     modeBtnGauge.addEventListener('click', () => setViewMode('gauge'));
+    modeBtnGraph.addEventListener('click', () => setViewMode('graph'));
 
     // Global shortcut: Esc resets
     window.addEventListener('keydown', (e) => {
@@ -99,17 +110,15 @@
     document.body.setAttribute('data-view', mode);
     localStorage.setItem('livewpm_view_mode', mode);
 
-    if (mode === 'text') {
-      modeBtnText.classList.add('active');
-      modeBtnText.setAttribute('aria-selected', 'true');
-      modeBtnGauge.classList.remove('active');
-      modeBtnGauge.setAttribute('aria-selected', 'false');
-    } else {
-      modeBtnGauge.classList.add('active');
-      modeBtnGauge.setAttribute('aria-selected', 'true');
-      modeBtnText.classList.remove('active');
-      modeBtnText.setAttribute('aria-selected', 'false');
-    }
+    [modeBtnText, modeBtnGauge, modeBtnGraph].forEach(btn => {
+      if (btn.dataset.mode === mode) {
+        btn.classList.add('active');
+        btn.setAttribute('aria-selected', 'true');
+      } else {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-selected', 'false');
+      }
+    });
 
     typeArea.focus();
   }

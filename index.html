@@ -47,6 +47,12 @@
             </svg>
             <span>Speedometer</span>
           </button>
+          <button class="mode-btn" id="modeBtnGraph" role="tab" aria-selected="false" data-mode="graph">
+            <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            <span>ECG Graph</span>
+          </button>
         </div>
 
         <button id="resetBtn" class="btn-subtle" title="Clear text and reset stats (Esc)">
@@ -159,6 +165,20 @@
               <span class="tier-pill" id="tierPillGauge">Warmup</span>
             </div>
           </div>
+        </div>
+      </div>
+      
+      <!-- MODE C: Live ECG Graph -->
+      <div class="view-panel view-graph-panel" id="viewGraph">
+        <div class="live-speed-wrapper">
+          <div class="speed-number" id="graphWpm">0</div>
+          <div class="speed-meta">
+            <span class="speed-unit">wpm</span>
+            <span class="tier-pill" id="tierPillGraph">Warmup</span>
+          </div>
+        </div>
+        <div class="graph-container">
+          <canvas id="speedCanvas"></canvas>
         </div>
       </div>
 
