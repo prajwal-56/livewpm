@@ -371,69 +371,120 @@
     
     const w = speedCanvas.width;
     const h = speedCanvas.height;
+    
+    // Dedicated axis area on the left
+    const padLeft = 35 * dpr;
+    const graphW = w - padLeft;
 
     // Determine dynamic Y-axis scale (zoom out if typing super fast)
     const peakInHistory = Math.max(...graphHistory, currentDisplayedWpm);
-    const targetMax = Math.max(180, peakInHistory * 1.2); // 20% headroom above peak
+    const targetMax = Math.max(180, peakInHistory * 1.2); 
     currentGraphMaxWpm += (targetMax - currentGraphMaxWpm) * 0.05;
 
     // Reset shadow state and clear canvas
     ctx.shadowBlur = 0;
     ctx.clearRect(0, 0, w, h);
 
-    // 1. Reactive Ambient Background Tint
-    // Gives the entire monitor a faint glow that matches the current speed tier
-    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.03)`;
-    ctx.fillRect(0, 0, w, h);
+    // 1. Rich Interactive Background
+    const bgRadial = ctx.createRadialGradient(padLeft + graphW/2, h/2, 0, padLeft + graphW/2, h/2, graphW/1.5);
+    bgRadial.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.08)`);
+    bgRadial.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.0)`);
+    ctx.fillStyle = bgRadial;
+    ctx.fillRect(padLeft, 0, graphW, h);
 
-    // 2. Draw Subtle Grid dynamically based on scale
+    // 2. Draw Dynamic Scrolling Grid
     ctx.strokeStyle = borderSubtle;
     ctx.lineWidth = 1 * dpr;
+    
+    // Vertical grid lines (Dotted & Scrolling for telemetry radar feel)
+    ctx.setLineDash([2 * dpr, 4 * dpr]);
+    ctx.beginPath();
+    const vGridStep = graphW / 12;
+    const scrollOffset = (now / 30) % vGridStep;
+    for (let x = padLeft - scrollOffset; x <= w; x += vGridStep) {
+        if (x >= padLeft) { 
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, h);
+        }
+    }
+    ctx.stroke();
+
+    // Horizontal grid lines (Dashed)
     ctx.setLineDash([4 * dpr, 4 * dpr]);
     ctx.beginPath();
-    
-    // Vertical grid lines (simulating ECG paper)
-    const vGridCount = 10;
-    for (let i = 1; i < vGridCount; i++) {
-        const x = (i / vGridCount) * w;
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, h);
-    }
-
-    // Horizontal grid lines
-    const gridStep = 60;
+    const gridStep = 30;
     const maxGridLine = Math.ceil(currentGraphMaxWpm / gridStep) * gridStep;
     for (let val = 0; val <= maxGridLine; val += gridStep) {
         const y = h - (val / currentGraphMaxWpm) * h;
         if (y >= 0 && y <= h) {
-            ctx.moveTo(0, y);
+            ctx.moveTo(padLeft, y);
             ctx.lineTo(w, y);
         }
     }
     ctx.stroke();
     ctx.setLineDash([]); 
 
+    // Axis separator line
+    ctx.beginPath();
+    ctx.moveTo(padLeft, 0);
+    ctx.lineTo(padLeft, h);
+    ctx.stroke();
+
     // 3. Draw Y-Axis Scale Labels
     const textMuted = style.getPropertyValue('--text-muted').trim() || '#87857d';
     ctx.font = `500 ${10 * dpr}px 'JetBrains Mono', monospace`;
     ctx.fillStyle = textMuted;
-    ctx.textBaseline = 'bottom';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'right';
     
     for (let val = gridStep; val <= maxGridLine; val += gridStep) {
         const y = h - (val / currentGraphMaxWpm) * h;
         if (y >= 0 && y <= h) {
-            ctx.fillText(val.toString(), 6 * dpr, y - 4 * dpr);
+            ctx.fillText(val.toString(), padLeft - 6 * dpr, y);
         }
     }
 
-    // Build the line path
+    const endX = padLeft + (graphW * 0.78); 
+
+    // 4. Digital Equalizer Bar Fill (Replaces solid gradient)
     ctx.beginPath();
-    let lastX = 0, lastY = h;
-    const endX = w * 0.78; // Position the leading edge at 78% of the canvas width
+    for (let i = 0; i < graphHistory.length; i += 4) {
+        const x = padLeft + (i / (GRAPH_MAX_POINTS - 1)) * (endX - padLeft);
+        const val = graphHistory[i];
+        const y = h - (val / currentGraphMaxWpm) * h;
+        if (val > 0.5) {
+            ctx.moveTo(x, h);
+            ctx.lineTo(x, y);
+        }
+    }
+    const barGrad = ctx.createLinearGradient(padLeft, 0, endX, 0);
+    barGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0)`);
+    barGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.18)`);
+    ctx.strokeStyle = barGrad;
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.stroke();
+
+    // 5. Telemetry Data Nodes (Tiny dots along the path)
+    ctx.beginPath();
+    for (let i = 0; i < graphHistory.length; i += 12) {
+        const x = padLeft + (i / (GRAPH_MAX_POINTS - 1)) * (endX - padLeft);
+        const val = graphHistory[i];
+        const y = h - (val / currentGraphMaxWpm) * h;
+        if (val > 2 && i < graphHistory.length - 5) { 
+            ctx.moveTo(x, y);
+            ctx.arc(x, y, 1.5 * dpr, 0, Math.PI * 2);
+        }
+    }
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.5)`;
+    ctx.fill();
+
+    // 6. Build & Draw the Main Neon Line
+    ctx.beginPath();
+    let lastX = padLeft, lastY = h;
     
     for (let i = 0; i < graphHistory.length; i++) {
-        const x = (i / (GRAPH_MAX_POINTS - 1)) * endX;
-        const val = graphHistory[i]; // Uncapped value
+        const x = padLeft + (i / (GRAPH_MAX_POINTS - 1)) * (endX - padLeft);
+        const val = graphHistory[i];
         const y = h - (val / currentGraphMaxWpm) * h;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
@@ -444,37 +495,31 @@
         }
     }
     
-    // Apply Glow and Fading Sweep Gradient
-    ctx.shadowBlur = 10 * dpr;
+    // Outer colored glow pass
+    ctx.shadowBlur = 12 * dpr;
     ctx.shadowColor = rgbSolid;
-    
-    const strokeGrad = ctx.createLinearGradient(0, 0, endX, 0);
+    const strokeGrad = ctx.createLinearGradient(padLeft, 0, endX, 0);
     strokeGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0)`);
-    strokeGrad.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, 0.3)`);
+    strokeGrad.addColorStop(0.2, `rgba(${r}, ${g}, ${b}, 0.4)`);
     strokeGrad.addColorStop(1, rgbSolid);
 
     ctx.strokeStyle = strokeGrad;
-    ctx.lineWidth = 2.5 * dpr;
+    ctx.lineWidth = 3.5 * dpr;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     ctx.stroke();
     
-    // Clear shadow so fill and node don't get double blurred excessively
+    // Inner bright core pass
     ctx.shadowBlur = 0;
-    
-    // Draw Area Fill under graph
-    ctx.lineTo(endX, h);
-    ctx.lineTo(0, h);
-    ctx.closePath();
-    
-    const fillGrad = ctx.createLinearGradient(0, 0, 0, h);
-    fillGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.2)`);
-    fillGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.0)`);
-    
-    ctx.fillStyle = fillGrad;
-    ctx.fill();
+    const coreGrad = ctx.createLinearGradient(padLeft, 0, endX, 0);
+    coreGrad.addColorStop(0, `rgba(255, 255, 255, 0)`);
+    coreGrad.addColorStop(0.6, `rgba(255, 255, 255, 0.1)`);
+    coreGrad.addColorStop(1, `rgba(255, 255, 255, 0.8)`);
+    ctx.strokeStyle = coreGrad;
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.stroke();
 
-    // Draw Leading Node (Glowing Dot)
+    // 7. Draw Leading Node (Glowing Dot)
     const pulseR = (5 + Math.sin(now / 120) * 1.5) * dpr;
     ctx.beginPath();
     ctx.arc(lastX, lastY, pulseR, 0, Math.PI * 2);
