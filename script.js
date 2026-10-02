@@ -68,6 +68,7 @@
   const GRAPH_MAX_POINTS = 200;
   let graphHistory = new Array(GRAPH_MAX_POINTS).fill(0);
   let currentGraphColor = [75, 74, 68];
+  let currentGraphMaxWpm = 180;
 
   // Helper
   function hexToRgb(hex) {
@@ -371,22 +372,59 @@
     const w = speedCanvas.width;
     const h = speedCanvas.height;
 
+    // Determine dynamic Y-axis scale (zoom out if typing super fast)
+    const peakInHistory = Math.max(...graphHistory, currentDisplayedWpm);
+    const targetMax = Math.max(180, peakInHistory * 1.2); // 20% headroom above peak
+    currentGraphMaxWpm += (targetMax - currentGraphMaxWpm) * 0.05;
+
     // Reset shadow state and clear canvas
     ctx.shadowBlur = 0;
     ctx.clearRect(0, 0, w, h);
 
-    // Draw Subtle Grid
+    // 1. Reactive Ambient Background Tint
+    // Gives the entire monitor a faint glow that matches the current speed tier
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.03)`;
+    ctx.fillRect(0, 0, w, h);
+
+    // 2. Draw Subtle Grid dynamically based on scale
     ctx.strokeStyle = borderSubtle;
     ctx.lineWidth = 1 * dpr;
     ctx.setLineDash([4 * dpr, 4 * dpr]);
     ctx.beginPath();
-    [0, 60, 120, 180].forEach(val => {
-        const y = h - (val / MAX_SPEEDO_WPM) * h;
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
-    });
+    
+    // Vertical grid lines (simulating ECG paper)
+    const vGridCount = 10;
+    for (let i = 1; i < vGridCount; i++) {
+        const x = (i / vGridCount) * w;
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+    }
+
+    // Horizontal grid lines
+    const gridStep = 60;
+    const maxGridLine = Math.ceil(currentGraphMaxWpm / gridStep) * gridStep;
+    for (let val = 0; val <= maxGridLine; val += gridStep) {
+        const y = h - (val / currentGraphMaxWpm) * h;
+        if (y >= 0 && y <= h) {
+            ctx.moveTo(0, y);
+            ctx.lineTo(w, y);
+        }
+    }
     ctx.stroke();
     ctx.setLineDash([]); 
+
+    // 3. Draw Y-Axis Scale Labels
+    const textMuted = style.getPropertyValue('--text-muted').trim() || '#87857d';
+    ctx.font = `500 ${10 * dpr}px 'JetBrains Mono', monospace`;
+    ctx.fillStyle = textMuted;
+    ctx.textBaseline = 'bottom';
+    
+    for (let val = gridStep; val <= maxGridLine; val += gridStep) {
+        const y = h - (val / currentGraphMaxWpm) * h;
+        if (y >= 0 && y <= h) {
+            ctx.fillText(val.toString(), 6 * dpr, y - 4 * dpr);
+        }
+    }
 
     // Build the line path
     ctx.beginPath();
@@ -395,8 +433,8 @@
     
     for (let i = 0; i < graphHistory.length; i++) {
         const x = (i / (GRAPH_MAX_POINTS - 1)) * endX;
-        const val = Math.min(graphHistory[i], MAX_SPEEDO_WPM);
-        const y = h - (val / MAX_SPEEDO_WPM) * h;
+        const val = graphHistory[i]; // Uncapped value
+        const y = h - (val / currentGraphMaxWpm) * h;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
         
@@ -464,6 +502,7 @@
     targetLiveWpm = 0;
     currentDisplayedWpm = 0;
     graphHistory.fill(0);
+    currentGraphMaxWpm = 180;
 
     liveWpmEl.textContent = '0';
     speedoValueEl.textContent = '0';
