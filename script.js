@@ -67,6 +67,16 @@
   
   const GRAPH_MAX_POINTS = 200;
   let graphHistory = new Array(GRAPH_MAX_POINTS).fill(0);
+  let currentGraphColor = [75, 74, 68];
+
+  // Helper
+  function hexToRgb(hex) {
+    hex = hex.replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    const int = parseInt(hex, 16);
+    if (isNaN(int)) return [75, 74, 68];
+    return [(int >> 16) & 255, (int >> 8) & 255, int & 255];
+  }
 
   // Initialize
   function init() {
@@ -324,14 +334,35 @@
   function drawGraph() {
     if (!ctx || document.body.getAttribute('data-view') !== 'graph') return;
 
+    const now = performance.now();
     const style = getComputedStyle(document.body);
-    const speedColor = style.getPropertyValue('--speed-color').trim() || '#4b4a44';
+    const speedHex = style.getPropertyValue('--speed-color').trim() || '#4b4a44';
     const borderSubtle = style.getPropertyValue('--border-subtle').trim() || '#dedbd2';
+
+    // Determine if user is slowing down (idle for 800ms OR dropping active WPM)
+    let isSlowing = false;
+    if (currentDisplayedWpm > 2) {
+      if (targetLiveWpm < currentDisplayedWpm - 1.5) isSlowing = true;
+      if (lastKeystrokeTime && (now - lastKeystrokeTime > 800)) isSlowing = true;
+    }
+
+    // Blend color towards vibrant red if slowing, otherwise use speed tier color
+    const targetRgb = isSlowing ? [225, 29, 72] : hexToRgb(speedHex);
+    
+    // Smooth lerp for color transition
+    currentGraphColor[0] += (targetRgb[0] - currentGraphColor[0]) * 0.08;
+    currentGraphColor[1] += (targetRgb[1] - currentGraphColor[1]) * 0.08;
+    currentGraphColor[2] += (targetRgb[2] - currentGraphColor[2]) * 0.08;
+
+    const r = Math.round(currentGraphColor[0]);
+    const g = Math.round(currentGraphColor[1]);
+    const b = Math.round(currentGraphColor[2]);
+    const rgbSolid = `rgb(${r}, ${g}, ${b})`;
 
     const dpr = window.devicePixelRatio || 1;
     const rect = speedCanvas.getBoundingClientRect();
     
-    // Only resize if needed
+    // Resize only if needed
     if (speedCanvas.width !== rect.width * dpr || speedCanvas.height !== rect.height * dpr) {
       speedCanvas.width = rect.width * dpr;
       speedCanvas.height = rect.height * dpr;
@@ -340,9 +371,11 @@
     const w = speedCanvas.width;
     const h = speedCanvas.height;
 
+    // Reset shadow state and clear canvas
+    ctx.shadowBlur = 0;
     ctx.clearRect(0, 0, w, h);
 
-    // Draw Grid
+    // Draw Subtle Grid
     ctx.strokeStyle = borderSubtle;
     ctx.lineWidth = 1 * dpr;
     ctx.setLineDash([4 * dpr, 4 * dpr]);
@@ -353,31 +386,68 @@
         ctx.lineTo(w, y);
     });
     ctx.stroke();
-    ctx.setLineDash([]); // reset
+    ctx.setLineDash([]); 
 
-    // Draw Line
+    // Build the line path
     ctx.beginPath();
+    let lastX = 0, lastY = h;
     for (let i = 0; i < graphHistory.length; i++) {
         const x = (i / (GRAPH_MAX_POINTS - 1)) * w;
         const val = Math.min(graphHistory[i], MAX_SPEEDO_WPM);
         const y = h - (val / MAX_SPEEDO_WPM) * h;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
+        
+        if (i === graphHistory.length - 1) {
+            lastX = x;
+            lastY = y;
+        }
     }
-    ctx.strokeStyle = speedColor;
+    
+    // Apply Glow and Fading Sweep Gradient
+    ctx.shadowBlur = 10 * dpr;
+    ctx.shadowColor = rgbSolid;
+    
+    const strokeGrad = ctx.createLinearGradient(0, 0, w, 0);
+    strokeGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0)`);
+    strokeGrad.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, 0.3)`);
+    strokeGrad.addColorStop(1, rgbSolid);
+
+    ctx.strokeStyle = strokeGrad;
     ctx.lineWidth = 2.5 * dpr;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     ctx.stroke();
     
-    // Draw Area Fill
+    // Clear shadow so fill and node don't get double blurred excessively
+    ctx.shadowBlur = 0;
+    
+    // Draw Area Fill under graph
     ctx.lineTo(w, h);
     ctx.lineTo(0, h);
     ctx.closePath();
-    ctx.globalAlpha = 0.1;
-    ctx.fillStyle = speedColor;
+    
+    const fillGrad = ctx.createLinearGradient(0, 0, 0, h);
+    fillGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.2)`);
+    fillGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.0)`);
+    
+    ctx.fillStyle = fillGrad;
     ctx.fill();
-    ctx.globalAlpha = 1.0;
+
+    // Draw Leading Node (Glowing Dot)
+    const pulseR = (5 + Math.sin(now / 120) * 1.5) * dpr;
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, pulseR, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.35)`;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, 3.5 * dpr, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.lineWidth = 2 * dpr;
+    ctx.strokeStyle = rgbSolid;
+    ctx.stroke();
   }
 
   function resetAll() {
